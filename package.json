@@ -17,8 +17,7 @@
     "test:e2e:headed": "playwright test --headed",
     "test:lighthouse": "lhci autorun",
     "analyze": "ANALYZE=true npm run build",
-    "clean": "rm -rf .next out coverage playwright-report test-results",
-    "prepare": "husky install"
+    "clean": "rm -rf .next out coverage playwright-report test-results"
   },
   "keywords": ["ai", "aigc", "image generation", "gemini", "ai tools"],
   "author": "",
