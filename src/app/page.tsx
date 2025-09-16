@@ -780,11 +780,11 @@ export default function Home() {
         )}
       </AnimatePresence>
       
-      {/* Mobile Results Button */}
+      {/* Mobile Results Button - Moved to left side */}
       {results && results.images && results.images.length > 0 && (
         <button
           onClick={() => setMobileResultsOpen(true)}
-          className="md:hidden fixed bottom-20 right-4 px-4 py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white font-medium shadow-2xl shadow-green-500/30 z-40 flex items-center gap-2"
+          className="md:hidden fixed bottom-4 left-4 px-4 py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white font-medium shadow-2xl shadow-green-500/30 z-40 flex items-center gap-2"
         >
           <Eye className="w-4 h-4" />
           查看结果 ({results.images.length})
