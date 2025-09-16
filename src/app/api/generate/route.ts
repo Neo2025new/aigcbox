@@ -128,7 +128,6 @@ export async function POST(request: NextRequest) {
               const mimeType = part.inlineData.mimeType || 'image/png';
               const dataUrl = `data:${mimeType};base64,${part.inlineData.data}`;
               generatedImages.push(dataUrl);
-              console.log('Found image in response with mimeType:', mimeType);
             }
             // 收集文本内容
             if (part.text) {
@@ -143,7 +142,9 @@ export async function POST(request: NextRequest) {
         textContent = response.text();
       }
     } catch (error) {
-      console.error('解析响应时出错:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('解析响应时出错:', error);
+      }
     }
 
     // 添加速率限制头部
