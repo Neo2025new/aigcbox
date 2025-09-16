@@ -259,28 +259,40 @@ export default function Home() {
       {/* Main Container */}
       <div className="relative z-10 h-screen flex flex-col">
         {/* Ultra Modern Header */}
-        <header className="glass-dark border-b border-gray-400/20">
+        <header className="glass-header border-b border-white/5">
           <div className="px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gray-400 to-teal-600 flex items-center justify-center shadow-lg shadow-gray-400/30">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-2xl shadow-violet-500/20">
                 <Sparkles className="w-6 h-6 text-white" />
               </div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">AIGCBox</h1>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-violet-400 to-purple-600 bg-clip-text text-transparent">AIGCBox</h1>
             </div>
             
-            {/* Gallery Button */}
-            <button
-              onClick={() => setShowGallery(!showGallery)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg glass text-gray-300 hover:text-gray-200 transition-all hover:scale-105"
-            >
-              <Layers className="w-4 h-4" />
-              创作库
-              {todayGallery.length > 0 && (
-                <span className="ml-1 px-2 py-0.5 text-xs bg-gray-400/20 text-gray-200 rounded-full">
-                  {todayGallery.length}
-                </span>
+            {/* Selected Tool Display */}
+            <div className="flex items-center gap-4">
+              {selectedTool && (
+                <div className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-500/10 to-purple-600/10 border border-violet-500/20">
+                  <span className="text-sm text-violet-300">当前工具:</span>
+                  <span className="ml-2 font-medium bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
+                    {selectedTool.name}
+                  </span>
+                </div>
               )}
-            </button>
+              
+              {/* Gallery Button */}
+              <button
+                onClick={() => setShowGallery(!showGallery)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-all hover:scale-105 border border-white/10"
+              >
+                <Layers className="w-4 h-4" />
+                创作库
+                {todayGallery.length > 0 && (
+                  <span className="ml-1 px-2 py-0.5 text-xs bg-violet-500/20 text-violet-300 rounded-full">
+                    {todayGallery.length}
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
         </header>
 
@@ -288,7 +300,7 @@ export default function Home() {
         <div className="flex-1 flex overflow-hidden">
           {/* Left Sidebar - Tools */}
           <div className={cn(
-            "glass-dark border-r border-gray-400/20 flex flex-col transition-all duration-300",
+            "glass-sidebar border-r border-white/5 flex flex-col transition-all duration-300",
             sidebarCollapsed ? "w-16" : "w-96"
           )}>
             {/* Search Bar */}
@@ -300,7 +312,7 @@ export default function Home() {
                     placeholder="搜索工具..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 bg-black/20 border border-gray-400/30 rounded-lg text-cyan-100 placeholder-gray-400/40 focus:outline-none focus:border-gray-300/50 transition-colors"
+                    className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-violet-500/50 transition-all focus:bg-white/10"
                   />
                 </div>
                 
@@ -312,8 +324,8 @@ export default function Home() {
                       className={cn(
                         "px-3 py-1 rounded-full text-xs transition-all",
                         selectedCategory === cat 
-                          ? "bg-gradient-to-r from-gray-400 to-gray-500 text-white shadow-lg shadow-gray-400/30" 
-                          : "glass text-gray-300 hover:text-gray-200 hover:bg-gray-400/10"
+                          ? "bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/30" 
+                          : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 border border-white/5"
                       )}
                       onClick={() => setSelectedCategory(cat)}
                     >
@@ -339,10 +351,10 @@ export default function Home() {
                     {!sidebarCollapsed ? (
                       <div className="flex items-start gap-3">
                         <div className={cn(
-                          "p-2 rounded-md",
+                          "p-2 rounded-lg",
                           tool.requiresImage 
-                            ? "bg-gradient-to-br from-blue-500/20 to-gray-400/20" 
-                            : "bg-gradient-to-br from-gray-500/20 to-green-500/20"
+                            ? "bg-gradient-to-br from-violet-500/20 to-purple-600/20" 
+                            : "bg-gradient-to-br from-purple-500/20 to-pink-500/20"
                         )}>
                           {tool.requiresImage ? (
                             <ImageIcon className="w-4 h-4 text-gray-300" />
@@ -351,7 +363,7 @@ export default function Home() {
                           )}
                         </div>
                         <div className="flex-1">
-                          <h4 className="font-medium text-cyan-100">{tool.name}</h4>
+                          <h4 className="font-medium text-violet-300">{tool.name}</h4>
                           <p className="text-xs text-gray-300/60 line-clamp-2">{tool.description}</p>
                           {tool.requiresMultipleImages && (
                             <span className="inline-block mt-2 px-2 py-0.5 text-xs bg-gray-400/20 text-gray-200 rounded-full">
@@ -391,8 +403,8 @@ export default function Home() {
             <div className="flex-1 overflow-y-auto">
               <div id="config-section" className="p-8 max-w-2xl mx-auto space-y-6">
                 {/* Upload Area */}
-                <div className="glass-dark rounded-xl p-6 border border-gray-400/20">
-                  <label className="flex items-center gap-2 mb-4 text-cyan-100 font-medium">
+                <div className="glass-card rounded-xl p-6 border border-white/5">
+                  <label className="flex items-center gap-2 mb-4 text-violet-300 font-medium">
                     <Upload className="w-4 h-4 text-gray-300" />
                     上传图片（可选）
                   </label>
@@ -439,17 +451,17 @@ export default function Home() {
 
                 {/* Tool Parameters */}
                 {selectedTool && (
-                  <div className="glass-dark rounded-xl p-6 border border-gray-400/20">
+                  <div className="glass-card rounded-xl p-6 border border-white/5">
                     <div className="flex items-center gap-2 mb-4">
                       <Settings className="w-4 h-4 text-gray-300" />
-                      <span className="font-medium text-cyan-100">工具参数配置</span>
+                      <span className="font-medium text-violet-300">工具参数配置</span>
                     </div>
                     
                     {selectedTool.parameters ? (
                       <div className="space-y-4">
                         {Object.entries(selectedTool.parameters).map(([key, param]) => (
                           <div key={key}>
-                            <label className="block text-sm font-medium text-cyan-100 mb-1">
+                            <label className="block text-sm font-medium text-violet-300 mb-1">
                               {param.label} {param.required && <span className="text-red-400">*</span>}
                             </label>
                             <input
@@ -459,7 +471,7 @@ export default function Home() {
                                 ...toolParams,
                                 [key]: e.target.value
                               })}
-                              className="w-full px-3 py-2 bg-black/30 border border-gray-400/30 rounded-lg text-cyan-100 placeholder-gray-400/40 focus:outline-none focus:border-gray-300/50 transition-colors"
+                              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-violet-500/50 transition-all focus:bg-white/10"
                             />
                           </div>
                         ))}
@@ -471,22 +483,22 @@ export default function Home() {
                 )}
 
                 {/* Custom Prompt */}
-                <div className="glass-dark rounded-xl p-6 border border-gray-400/20">
-                  <label className="block mb-2 text-cyan-100 font-medium">自定义提示词（可选）</label>
+                <div className="glass-card rounded-xl p-6 border border-white/5">
+                  <label className="block mb-2 text-violet-300 font-medium">自定义提示词（可选）</label>
                   <textarea
                     placeholder={selectedTool ? "添加额外的描述..." : "描述你想要生成的图像..."}
                     value={customPrompt}
                     onChange={(e) => setCustomPrompt(e.target.value)}
-                    className="min-h-[100px] resize-none w-full px-3 py-2 bg-black/30 border border-gray-400/30 rounded-lg text-cyan-100 placeholder-gray-400/40 focus:outline-none focus:border-gray-300/50 transition-colors"
+                    className="min-h-[100px] resize-none w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-violet-500/50 transition-all focus:bg-white/10"
                   />
                 </div>
 
                 {/* Final Prompt Preview */}
                 {(selectedTool || customPrompt) && (
-                  <div className="glass-dark rounded-xl p-6 border border-gray-400/20">
+                  <div className="glass-card rounded-xl p-6 border border-white/5">
                     <button
                       onClick={() => setShowPromptPreview(!showPromptPreview)}
-                      className="flex items-center gap-2 text-sm font-medium mb-3 text-cyan-100"
+                      className="flex items-center gap-2 text-sm font-medium mb-3 text-violet-300"
                     >
                       <Eye className="w-4 h-4 text-gray-300" />
                       最终提示词预览
@@ -506,24 +518,7 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* Generate Button */}
-                <button
-                  onClick={handleGenerate}
-                  disabled={isGenerating}
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-gray-400 to-gray-500 text-white font-medium transition-all hover:scale-105 hover:shadow-lg hover:shadow-gray-400/30 disabled:opacity-50 disabled:scale-100 disabled:hover:shadow-none"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="inline-block w-4 h-4 mr-2 animate-spin" />
-                      生成中...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="inline-block w-4 h-4 mr-2" />
-                      开始生成
-                    </>
-                  )}
-                </button>
+                {/* Generate Button Removed - Now Fixed at Bottom Right */}
 
                 {error && (
                   <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30">
@@ -532,8 +527,8 @@ export default function Home() {
                 )}
 
                 {/* History */}
-                <div className="glass-dark rounded-xl p-6 border border-gray-400/20">
-                  <h3 className="font-medium mb-4 flex items-center gap-2 text-cyan-100">
+                <div className="glass-card rounded-xl p-6 border border-white/5">
+                  <h3 className="font-medium mb-4 flex items-center gap-2 text-violet-300">
                     <History className="w-4 h-4 text-gray-300" />
                     历史记录
                   </h3>
@@ -580,7 +575,7 @@ export default function Home() {
               ) : (
                 <div className="space-y-4">
                   {results.images && results.images.map((image: string, idx: number) => (
-                    <div key={idx} className="glass-dark rounded-xl overflow-hidden border border-gray-400/20 flex flex-col max-h-[calc(100vh-200px)]">
+                    <div key={idx} className="glass-card rounded-xl overflow-hidden border border-white/5 flex flex-col max-h-[calc(100vh-200px)]">
                       {/* Image Display */}
                       <div className="p-4 bg-black/30 flex-shrink overflow-hidden">
                         <img
@@ -669,7 +664,7 @@ export default function Home() {
                                 onChange={(e) => setEditPrompt(e.target.value)}
                                 onKeyPress={(e) => e.key === 'Enter' && handleEdit()}
                                 autoFocus
-                                className="flex-1 px-3 py-2 bg-black/30 border border-gray-400/30 rounded-lg text-cyan-100 placeholder-gray-400/40 focus:outline-none focus:border-gray-300/50 transition-colors"
+                                className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-violet-500/50 transition-all focus:bg-white/10"
                               />
                               <button
                                 className="px-3 py-2 rounded-lg bg-gradient-to-r from-gray-400 to-gray-500 text-white font-medium transition-all hover:scale-105 hover:shadow-lg hover:shadow-gray-400/30 disabled:opacity-50 disabled:scale-100 disabled:hover:shadow-none"
@@ -708,7 +703,7 @@ export default function Home() {
               initial={{ scale: 0.95 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.95 }}
-              className="max-w-6xl max-h-[80vh] overflow-y-auto glass-dark rounded-xl p-8 border border-gray-400/20"
+              className="max-w-6xl max-h-[80vh] overflow-y-auto glass-card rounded-xl p-8 border border-white/5"
               onClick={(e) => e.stopPropagation()}
             >
               <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">今日创作库</h2>
@@ -743,6 +738,26 @@ export default function Home() {
           </motion.div>
         )}
       </AnimatePresence>
+      
+      {/* Fixed Generate Button */}
+      <button
+        onClick={handleGenerate}
+        disabled={isGenerating}
+        className="fixed bottom-8 right-8 px-8 py-4 rounded-2xl bg-gradient-to-r from-violet-500 to-purple-600 text-white font-medium transition-all hover:scale-110 hover:shadow-2xl hover:shadow-purple-500/30 disabled:opacity-50 disabled:scale-100 disabled:hover:shadow-none z-50 flex items-center gap-3 group"
+      >
+        {isGenerating ? (
+          <>
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span className="text-lg">生成中...</span>
+          </>
+        ) : (
+          <>
+            <Sparkles className="w-5 h-5 group-hover:animate-pulse" />
+            <span className="text-lg">开始生成</span>
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-violet-600 to-purple-700 opacity-0 group-hover:opacity-100 transition-opacity -z-10 blur-xl" />
+          </>
+        )}
+      </button>
     </div>
   );
 }
