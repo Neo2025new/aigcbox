@@ -1,0 +1,323 @@
+name: Hotfix Deployment
+
+on:
+  push:
+    branches:
+      - 'hotfix/*'
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Hotfix branch to deploy'
+        required: true
+        type: string
+      skip_tests:
+        description: 'Skip tests (emergency only)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  validate-hotfix:
+    name: Validate Hotfix
+    runs-on: ubuntu-latest
+    outputs:
+      is_emergency: ${{ steps.check.outputs.is_emergency }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check hotfix requirements
+        id: check
+        run: |
+          # 检查是否是紧急修复（通过 commit 消息或分支名）
+          if [[ "${{ github.ref }}" == *"emergency"* ]] || [[ "${{ github.event.inputs.skip_tests }}" == "true" ]]; then
+            echo "is_emergency=true" >> $GITHUB_OUTPUT
+            echo "🚨 Emergency hotfix detected"
+          else
+            echo "is_emergency=false" >> $GITHUB_OUTPUT
+            echo "📋 Standard hotfix process"
+          fi
+
+      - name: Notify team
+        run: |
+          echo "🔥 HOTFIX DEPLOYMENT STARTED"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Emergency: ${{ steps.check.outputs.is_emergency }}"
+          echo "Triggered by: ${{ github.actor }}"
+
+  # 快速代码质量检查（紧急情况下可跳过）
+  quick-quality-check:
+    name: Quick Quality Check
+    runs-on: ubuntu-latest
+    needs: validate-hotfix
+    if: needs.validate-hotfix.outputs.is_emergency != 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Quick lint check
+        run: npm run lint
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+  # 快速构建
+  hotfix-build:
+    name: Hotfix Build
+    runs-on: ubuntu-latest
+    needs: [validate-hotfix, quick-quality-check]
+    if: always() && !failure() && !cancelled()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          NODE_ENV: production
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: hotfix-build
+          path: .next
+          retention-days: 7
+
+  # 部署到 Staging（用于快速验证）
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: hotfix-build
+    environment: staging
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel Environment
+        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build Project
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Staging
+        id: deploy
+        run: |
+          url=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
+          echo "url=$url" >> $GITHUB_OUTPUT
+          echo "🚀 Staging deployment: $url"
+
+      - name: Quick smoke test
+        run: |
+          sleep 15
+          if curl -f ${{ steps.deploy.outputs.url }}/api/health; then
+            echo "✅ Staging smoke test passed"
+          else
+            echo "❌ Staging smoke test failed"
+            exit 1
+          fi
+
+  # 生产环境部署确认
+  production-approval:
+    name: Production Deployment Approval
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    environment: production
+    steps:
+      - name: Manual approval checkpoint
+        run: |
+          echo "🔍 Staging deployment verified"
+          echo "🎯 Ready for production deployment"
+          echo "🚀 Staging URL: ${{ needs.deploy-staging.outputs.url }}"
+
+  # 生产环境部署
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [deploy-staging, production-approval]
+    environment: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel Environment
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build Project
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Production
+        id: deploy
+        run: |
+          url=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
+          echo "url=$url" >> $GITHUB_OUTPUT
+          echo "🚀 Production deployment: $url"
+
+      - name: Production verification
+        run: |
+          sleep 30
+          
+          # 健康检查
+          if curl -f https://your-production-domain.com/api/health; then
+            echo "✅ Production health check passed"
+          else
+            echo "❌ Production health check failed"
+            exit 1
+          fi
+          
+          # 基础功能测试
+          if curl -f https://your-production-domain.com/; then
+            echo "✅ Production homepage accessible"
+          else
+            echo "❌ Production homepage failed"
+            exit 1
+          fi
+
+      - name: Create hotfix release tag
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          tag="hotfix-$(date +'%Y%m%d-%H%M%S')"
+          git tag -a "$tag" -m "Hotfix release: ${{ github.ref_name }}"
+          git push origin "$tag"
+          echo "🏷️  Created release tag: $tag"
+
+  # 部署后监控
+  post-deployment-monitoring:
+    name: Post-Deployment Monitoring
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    if: success()
+    steps:
+      - name: Extended monitoring
+        run: |
+          echo "🔍 Starting post-deployment monitoring..."
+          
+          # 连续监控 10 分钟
+          for i in {1..20}; do
+            echo "Monitoring check $i/20"
+            
+            if curl -f https://your-production-domain.com/api/health; then
+              echo "✅ Health check passed"
+            else
+              echo "❌ Health check failed"
+              echo "🚨 ALERT: Production health check failure detected!"
+              
+              # 这里可以触发自动回滚
+              echo "Consider triggering rollback workflow"
+              exit 1
+            fi
+            
+            sleep 30
+          done
+          
+          echo "✅ Extended monitoring completed successfully"
+
+  # 通知和文档
+  hotfix-notification:
+    name: Hotfix Notification
+    runs-on: ubuntu-latest
+    needs: [deploy-production, post-deployment-monitoring]
+    if: always()
+    steps:
+      - name: Create deployment summary
+        run: |
+          if [ "${{ needs.deploy-production.result }}" == "success" ]; then
+            echo "✅ HOTFIX DEPLOYMENT SUCCESSFUL"
+          else
+            echo "❌ HOTFIX DEPLOYMENT FAILED"
+          fi
+          
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Triggered by: ${{ github.actor }}"
+          echo "Time: $(date)"
+          echo "Emergency: ${{ needs.validate-hotfix.outputs.is_emergency }}"
+
+      - name: Create hotfix documentation
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const success = '${{ needs.deploy-production.result }}' === 'success';
+            const title = success ? 
+              '✅ Hotfix Deployed Successfully' : 
+              '❌ Hotfix Deployment Failed';
+            
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `${title}: ${{ github.ref_name }}`,
+              body: `
+            ## Hotfix Deployment Summary
+            
+            - **Branch**: ${{ github.ref_name }}
+            - **Status**: ${success ? 'SUCCESS' : 'FAILED'}
+            - **Emergency**: ${{ needs.validate-hotfix.outputs.is_emergency }}
+            - **Triggered by**: ${{ github.actor }}
+            - **Time**: ${new Date().toISOString()}
+            
+            ## Changes
+            
+            ${success ? 
+              '- Hotfix has been successfully deployed to production' :
+              '- Hotfix deployment failed - immediate attention required'
+            }
+            
+            ## Next Steps
+            
+            ${success ? `
+            - [ ] Monitor application performance closely
+            - [ ] Verify the fix resolves the reported issue
+            - [ ] Plan proper fix integration into main branch
+            - [ ] Update documentation if needed
+            ` : `
+            - [ ] Investigate deployment failure immediately
+            - [ ] Consider manual rollback if needed
+            - [ ] Fix deployment issues and retry
+            - [ ] Escalate to senior team if critical
+            `}
+              `,
+              labels: ['hotfix', success ? 'deployed' : 'failed', 'production']
+            });
+
+# 并发控制 - 确保同一时间只有一个hotfix部署
+concurrency:
+  group: hotfix-deployment
+  cancel-in-progress: false

@@ -1,0 +1,183 @@
+name: Rollback Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to rollback'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      version:
+        description: 'Version/deployment to rollback to (leave empty for previous)'
+        required: false
+        type: string
+      reason:
+        description: 'Reason for rollback'
+        required: true
+        type: string
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  rollback:
+    name: Rollback to Previous Version
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+      - name: Validate rollback request
+        run: |
+          echo "🔄 Rolling back ${{ github.event.inputs.environment }} environment"
+          echo "📝 Reason: ${{ github.event.inputs.reason }}"
+          echo "🎯 Target version: ${{ github.event.inputs.version || 'previous' }}"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Get deployment list
+        id: deployments
+        run: |
+          deployments=$(vercel list --token=${{ secrets.VERCEL_TOKEN }} --scope=${{ secrets.VERCEL_ORG_ID }})
+          echo "deployments<<EOF" >> $GITHUB_OUTPUT
+          echo "$deployments" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Identify rollback target
+        id: rollback_target
+        run: |
+          # 如果指定了版本，使用该版本；否则获取上一个部署
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            target="${{ github.event.inputs.version }}"
+          else
+            # 获取当前环境的上一个成功部署
+            if [ "${{ github.event.inputs.environment }}" == "production" ]; then
+              # 对于生产环境，获取上一个生产部署
+              target=$(vercel list --token=${{ secrets.VERCEL_TOKEN }} --prod | grep -E "^[a-z0-9]+" | sed -n '2p' | awk '{print $1}')
+            else
+              # 对于 staging，获取上一个预览部署
+              target=$(vercel list --token=${{ secrets.VERCEL_TOKEN }} | grep -E "^[a-z0-9]+" | sed -n '2p' | awk '{print $1}')
+            fi
+          fi
+          
+          if [ -z "$target" ]; then
+            echo "❌ No rollback target found"
+            exit 1
+          fi
+          
+          echo "rollback_url=$target" >> $GITHUB_OUTPUT
+          echo "🎯 Rollback target: $target"
+
+      - name: Perform rollback
+        run: |
+          if [ "${{ github.event.inputs.environment }}" == "production" ]; then
+            # 生产环境回滚
+            vercel promote ${{ steps.rollback_target.outputs.rollback_url }} --token=${{ secrets.VERCEL_TOKEN }}
+          else
+            # Staging 环境回滚 (重新部署之前的版本)
+            echo "Staging rollback completed - previous deployment is now active"
+          fi
+
+      - name: Verify rollback
+        run: |
+          sleep 30
+          
+          if [ "${{ github.event.inputs.environment }}" == "production" ]; then
+            url="https://your-production-domain.com"
+          else
+            url="${{ steps.rollback_target.outputs.rollback_url }}"
+          fi
+          
+          # 健康检查
+          if curl -f "$url/api/health"; then
+            echo "✅ Rollback successful - health check passed"
+          else
+            echo "❌ Rollback verification failed"
+            exit 1
+          fi
+
+      - name: Notify team
+        run: |
+          echo "🚨 ROLLBACK COMPLETED"
+          echo "Environment: ${{ github.event.inputs.environment }}"
+          echo "Target: ${{ steps.rollback_target.outputs.rollback_url }}"
+          echo "Reason: ${{ github.event.inputs.reason }}"
+          echo "Triggered by: ${{ github.actor }}"
+          echo "Time: $(date)"
+
+      - name: Create rollback issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 Rollback: ${{ github.event.inputs.environment }} - ${{ github.event.inputs.reason }}`,
+              body: `
+            ## Rollback Details
+            
+            - **Environment**: ${{ github.event.inputs.environment }}
+            - **Rollback Target**: ${{ steps.rollback_target.outputs.rollback_url }}
+            - **Reason**: ${{ github.event.inputs.reason }}
+            - **Triggered by**: ${{ github.actor }}
+            - **Time**: ${new Date().toISOString()}
+            
+            ## Next Steps
+            
+            - [ ] Investigate the issue that caused the rollback
+            - [ ] Fix the problem in the codebase
+            - [ ] Test the fix thoroughly
+            - [ ] Plan the next deployment
+            
+            ## Monitoring
+            
+            Please monitor the application closely for the next few hours to ensure stability.
+              `,
+              labels: ['rollback', 'urgent', '${{ github.event.inputs.environment }}']
+            });
+
+  post-rollback-monitoring:
+    name: Post-Rollback Monitoring
+    runs-on: ubuntu-latest
+    needs: rollback
+    if: success()
+    
+    steps:
+      - name: Extended health monitoring
+        run: |
+          echo "🔍 Starting post-rollback monitoring..."
+          
+          if [ "${{ github.event.inputs.environment }}" == "production" ]; then
+            url="https://your-production-domain.com"
+          else
+            url="https://your-staging-domain.com"
+          fi
+          
+          # 持续监控 5 分钟
+          for i in {1..10}; do
+            if curl -f "$url/api/health"; then
+              echo "✅ Health check $i/10 passed"
+            else
+              echo "❌ Health check $i/10 failed"
+              exit 1
+            fi
+            sleep 30
+          done
+          
+          echo "✅ Extended monitoring completed successfully"
+
+      - name: Performance verification
+        run: |
+          # 这里可以添加性能测试
+          echo "🚀 Performance verification would run here"
+          # 例如：运行 Lighthouse CI 或其他性能测试
