@@ -15,7 +15,7 @@ export function AccessibleHeading({
   className?: string;
   [key: string]: any;
 }) {
-  const Tag = `h${level}` as keyof JSX.IntrinsicElements;
+  const Tag = `h${level}` as keyof React.JSX.IntrinsicElements;
   
   return (
     <Tag 
