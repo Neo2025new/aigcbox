@@ -59,6 +59,7 @@ export default function Home() {
   const [showGallery, setShowGallery] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [mobileResultsOpen, setMobileResultsOpen] = useState(false);
   const resultsRef = useRef<HTMLDivElement>(null);
 
   // 获取分类
@@ -152,6 +153,11 @@ export default function Home() {
 
       setResults(data);
       
+      // 在移动端自动打开结果视图
+      if (window.innerWidth < 768) {
+        setMobileResultsOpen(true);
+      }
+      
       // 添加到历史记录
       const newHistoryItem: HistoryItem = {
         prompt: finalPrompt,
@@ -222,6 +228,11 @@ export default function Home() {
           ...results,
           images: newImages
         });
+        
+        // 在移动端刷新结果视图
+        if (window.innerWidth < 768) {
+          setMobileResultsOpen(true);
+        }
       }
       
       // 添加到今日创作库
@@ -592,8 +603,8 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Right - Results */}
-          <div className="flex-1 flex flex-col bg-gradient-to-br from-black/20 to-purple-900/5">
+          {/* Right - Results (Desktop Only) */}
+          <div className="hidden md:flex flex-1 flex-col bg-gradient-to-br from-black/20 to-purple-900/5">
             <div className="flex-1 overflow-y-auto p-4 md:p-6" ref={resultsRef}>
               {!results ? (
                 <div className="h-full flex items-center justify-center">
@@ -768,6 +779,106 @@ export default function Home() {
           </motion.div>
         )}
       </AnimatePresence>
+      
+      {/* Mobile Results Button */}
+      {results && results.images && results.images.length > 0 && (
+        <button
+          onClick={() => setMobileResultsOpen(true)}
+          className="md:hidden fixed bottom-20 right-4 px-4 py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white font-medium shadow-2xl shadow-green-500/30 z-40 flex items-center gap-2"
+        >
+          <Eye className="w-4 h-4" />
+          查看结果 ({results.images.length})
+        </button>
+      )}
+      
+      {/* Mobile Results Modal */}
+      {mobileResultsOpen && (
+        <div className="md:hidden fixed inset-0 z-50 bg-black/95 overflow-y-auto">
+          <div className="sticky top-0 bg-gradient-to-b from-black to-transparent p-4 flex items-center justify-between">
+            <h2 className="text-xl font-bold text-white">生成结果</h2>
+            <button
+              onClick={() => setMobileResultsOpen(false)}
+              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          
+          <div className="p-4 space-y-4">
+            {results && results.images && results.images.map((image: string, idx: number) => (
+              <div key={idx} className="glass-card rounded-xl overflow-hidden border border-white/5">
+                {/* Image Display */}
+                <div className="p-4 bg-black/30">
+                  <img
+                    src={image}
+                    alt={`Generated ${idx + 1}`}
+                    className="w-full rounded-md object-contain"
+                  />
+                </div>
+                
+                {/* Action Bar */}
+                <div className="p-4 border-t border-gray-400/20">
+                  <div className="flex justify-between items-center">
+                    <div className="flex gap-2">
+                      {/* Edit Button */}
+                      <button
+                        className={cn(
+                          "p-2 rounded-lg transition-all",
+                          editingImageIndex === idx 
+                            ? "bg-violet-500 text-white" 
+                            : "glass text-gray-300 hover:text-gray-200 hover:bg-gray-400/10"
+                        )}
+                        onClick={() => setEditingImageIndex(editingImageIndex === idx ? null : idx)}
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+                      
+                      {/* Regenerate Button */}
+                      <button
+                        className="p-2 rounded-lg glass text-gray-300 hover:text-gray-200 hover:bg-gray-400/10 transition-all"
+                        onClick={() => {
+                          setCustomPrompt(results.prompt || '');
+                          setMobileResultsOpen(false);
+                        }}
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                      </button>
+                    </div>
+                    
+                    {/* Download Button */}
+                    <button
+                      className="p-2 rounded-lg bg-gradient-to-r from-violet-500 to-purple-600 text-white transition-all hover:scale-105 hover:shadow-lg hover:shadow-violet-500/30"
+                      onClick={() => downloadImage(image, `aigcbox-${Date.now()}.png`)}
+                    >
+                      <Download className="w-4 h-4" />
+                    </button>
+                  </div>
+                  
+                  {/* Edit Prompt Input */}
+                  {editingImageIndex === idx && (
+                    <div className="mt-3 flex gap-2">
+                      <input
+                        placeholder="修改提示词..."
+                        value={editPrompt}
+                        onChange={(e) => setEditPrompt(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleEdit()}
+                        autoFocus
+                        className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-violet-500/50 transition-all focus:bg-white/10"
+                      />
+                      <button
+                        className="px-3 py-2 rounded-lg bg-gradient-to-r from-violet-500 to-purple-600 text-white font-medium transition-all hover:scale-105"
+                        onClick={handleEdit}
+                      >
+                        <Send className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       
       {/* Fixed Generate Button */}
       <button
