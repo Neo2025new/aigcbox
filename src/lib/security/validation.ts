@@ -24,9 +24,7 @@ export const fileValidationSchema = z.object({
     'image/jpg',
     'image/gif',
     'image/webp'
-  ], {
-    errorMap: () => ({ message: '不支持的文件类型' })
-  }),
+  ] as const, '不支持的文件类型'),
   name: z.string()
     .max(255, '文件名过长')
     .refine((name) => !/[<>:"/\\|?*\x00-\x1f]/g.test(name), {
@@ -89,7 +87,7 @@ export async function validateFile(file: File): Promise<{
   if (!validation.success) {
     return {
       success: false,
-      error: validation.error.errors[0]?.message || '文件验证失败',
+      error: validation.error.issues[0]?.message || '文件验证失败',
     };
   }
   
@@ -156,7 +154,7 @@ export async function validateRequest(formData: FormData): Promise<{
     if (!paramValidation.success) {
       return {
         success: false,
-        error: paramValidation.error.errors[0]?.message || '参数验证失败',
+        error: paramValidation.error.issues[0]?.message || '参数验证失败',
       };
     }
     
