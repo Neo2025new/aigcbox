@@ -106,9 +106,11 @@ export async function POST(request: NextRequest) {
     const result = await model.generateContent(parts);
     const response = await result.response;
     
-    // 调试：打印响应结构
-    console.log('Full response:', result);
-    console.log('Response text:', response.text());
+    // 调试：仅在开发环境打印响应结构
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Full response:', result);
+      console.log('Response text:', response.text());
+    }
     
     // 检查响应中是否包含图像数据
     const generatedImages: string[] = [];

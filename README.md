@@ -78,6 +78,7 @@ npm run dev
 - **AI服务**: Google Gemini API
 - **类型检查**: TypeScript
 - **代码规范**: ESLint
+- **测试框架**: Jest + React Testing Library
 
 ## 📝 开发指南
 
@@ -122,10 +123,11 @@ aigcbox/
 ### 常用命令
 
 ```bash
-npm run dev      # 启动开发服务器
-npm run build    # 构建生产版本
-npm run lint     # 代码检查
-npm run test     # 运行测试
+npm run dev         # 启动开发服务器
+npm run build       # 构建生产版本
+npm run lint        # 代码检查
+npm run type-check  # 类型检查
+npm run test        # 运行测试
 ```
 
 ## 🌍 国内访问优化

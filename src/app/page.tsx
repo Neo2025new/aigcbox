@@ -61,6 +61,7 @@ export default function Home() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [mobileResultsOpen, setMobileResultsOpen] = useState(false);
   const resultsRef = useRef<HTMLDivElement>(null);
+  const imageUrlsRef = useRef<string[]>([]);
 
   // 获取分类
   const categories = ['all', ...Array.from(new Set(ALL_TOOLS.map(t => t.category)))];
@@ -83,6 +84,23 @@ export default function Home() {
       setFinalPrompt(customPrompt);
     }
   }, [selectedTool, customPrompt, toolParams]);
+
+  // 清理图片 URL，防止内存泄漏
+  useEffect(() => {
+    // 清理旧的 URLs
+    imageUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+    imageUrlsRef.current = [];
+
+    // 为新图片创建 URLs
+    const newUrls = uploadedImages.map(img => URL.createObjectURL(img));
+    imageUrlsRef.current = newUrls;
+
+    // 组件卸载时清理
+    return () => {
+      imageUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+      imageUrlsRef.current = [];
+    };
+  }, [uploadedImages]);
 
   const onDrop = (acceptedFiles: File[]) => {
     const newImages = [...uploadedImages, ...acceptedFiles].slice(0, 4);
@@ -467,7 +485,7 @@ export default function Home() {
                       {uploadedImages.map((img, idx) => (
                         <div key={idx} className="relative group">
                           <img
-                            src={URL.createObjectURL(img)}
+                            src={imageUrlsRef.current[idx] || ''}
                             alt={`upload-${idx}`}
                             className="w-full aspect-square object-cover rounded-md"
                           />

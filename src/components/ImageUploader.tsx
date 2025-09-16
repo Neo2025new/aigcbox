@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
 
@@ -10,11 +10,30 @@ interface ImageUploaderProps {
   maxImages?: number;
 }
 
-export default function ImageUploader({ 
-  images, 
-  onImagesChange, 
-  maxImages = 1 
+export default function ImageUploader({
+  images,
+  onImagesChange,
+  maxImages = 1
 }: ImageUploaderProps) {
+  const imageUrlsRef = useRef<string[]>([]);
+
+  // 清理图片 URL，防止内存泄漏
+  useEffect(() => {
+    // 清理旧的 URLs
+    imageUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+    imageUrlsRef.current = [];
+
+    // 为新图片创建 URLs
+    const newUrls = images.map(img => URL.createObjectURL(img));
+    imageUrlsRef.current = newUrls;
+
+    // 组件卸载时清理
+    return () => {
+      imageUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+      imageUrlsRef.current = [];
+    };
+  }, [images]);
+
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const newImages = [...images, ...acceptedFiles].slice(0, maxImages);
     onImagesChange(newImages);
@@ -74,7 +93,7 @@ export default function ImageUploader({
           {images.map((image, index) => (
             <div key={index} className="relative group">
               <img
-                src={URL.createObjectURL(image)}
+                src={imageUrlsRef.current[index] || ''}
                 alt={`上传的图片 ${index + 1}`}
                 className="w-full h-32 object-cover rounded-lg border border-gray-200"
               />

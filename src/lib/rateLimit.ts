@@ -16,9 +16,9 @@ class RateLimiter {
   constructor(maxRequests = 10, windowMs = 60000) {
     this.maxRequests = maxRequests;
     this.windowMs = windowMs;
-    
-    // 定期清理过期记录
-    setInterval(() => this.cleanup(), windowMs);
+
+    // 不使用 setInterval，改为在每次检查时自动清理
+    // 这样在 serverless 环境中也能正常工作
   }
 
   /**
@@ -26,6 +26,9 @@ class RateLimiter {
    */
   check(identifier: string): { allowed: boolean; remaining: number; resetTime: number } {
     const now = Date.now();
+
+    // 在检查前清理过期记录（避免内存泄漏）
+    this.cleanup();
     const entry = this.limits.get(identifier);
 
     // 如果没有记录或已过期，创建新记录

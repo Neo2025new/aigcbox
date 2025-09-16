@@ -21,7 +21,7 @@ export default function ToolParameterInput({ tool, onParametersChange }: ToolPar
   useEffect(() => {
     setParameters({});
     onParametersChange({});
-  }, [tool?.id]);
+  }, [tool?.id, onParametersChange]);
 
   if (!tool) {
     return (
